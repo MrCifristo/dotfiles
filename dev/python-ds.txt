@@ -1,0 +1,37 @@
+# Entorno de ciencia de datos — se instala en ~/.venvs/ds y se registra
+# como kernel de Jupyter ("Python (ds)").
+#
+# Sale de los requirements.txt de algebra-lineal, Data-Science y
+# NaturalLanguageProcessing, unificados y sin pines: para tareas de clase
+# conviene la última versión de cada cosa.
+
+# — núcleo numérico —
+numpy
+scipy
+pandas
+polars
+pyarrow
+duckdb
+
+# — gráficas —
+matplotlib
+seaborn
+
+# — machine learning / NLP —
+scikit-learn
+nltk
+wordcloud
+
+# — optimización —
+pulp
+
+# — notebooks y exportación —
+jupyter
+notebook
+ipykernel
+nbconvert
+
+# — entrada/salida —
+openpyxl
+lxml
+requests

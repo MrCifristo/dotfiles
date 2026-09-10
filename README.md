@@ -33,6 +33,49 @@ gh repo clone MrCifristo/dotfiles ~/.dotfiles
 ~/.dotfiles/install.sh
 ```
 
+## Entorno de desarrollo
+
+Aparte del rice, hay un segundo instalador para dejar la máquina lista para
+programar: compiladores, Node por nvm, pnpm, Docker, clientes de base de datos
+y un entorno de Python para los notebooks.
+
+```sh
+~/.dotfiles/dev-setup.sh              # detecta el sistema y llama al que toca
+~/.dotfiles/dev-setup.sh --dry-run    # enseña qué haría, sin tocar nada
+```
+
+O directamente el de cada sistema: `dev/macos.sh`, `dev/fedora.sh`, `dev/arch.sh`.
+
+| Opción       | Qué se salta                                      |
+|--------------|---------------------------------------------------|
+| `--no-tex`   | pandoc y LaTeX (exportar notebooks a PDF, ~1 GB)  |
+| `--no-docker`| Docker y lazydocker                               |
+| `--no-ds`    | el entorno de Python en `~/.venvs/ds`             |
+| `--no-gui`   | VS Code y Chromium                                |
+| `--minimal`  | las cuatro anteriores                             |
+| `--dry-run`  | no instala nada, solo enseña la lista             |
+
+Qué instala, en corto:
+
+- **Compiladores y librerías nativas.** cairo, pango, jpeg, giflib y librsvg
+  para `node-canvas` (lo arrastra `chartjs-node-canvas`, los reportes de
+  ManoCard); libvips para `sharp`. Sin esto `pnpm install` falla al compilar.
+- **Node por nvm**, no por el gestor del sistema, porque FastKitchen pide `>=24`
+  y ManoCard `>=22`. pnpm entra por corepack, que respeta el `packageManager`
+  de cada `package.json`.
+- **Docker** con compose y buildx, más lazygit y lazydocker.
+- **Clientes** de Postgres, MySQL/MariaDB, Redis y SQLite. Los servidores
+  siguen en Docker.
+- **Python:** `uv` y un entorno en `~/.venvs/ds` con numpy, pandas, polars,
+  duckdb, scikit-learn, matplotlib, seaborn, nltk y jupyter. Queda registrado
+  como kernel «Python (ds)», así que aparece solo en VS Code y en Jupyter.
+  El alias `ds` lo activa. La lista se edita en `dev/python-ds.txt`.
+- **Exportar notebooks a PDF:** pandoc y lo justo de LaTeX, incluidos los
+  paquetes que nbconvert necesita y las distribuciones mínimas no traen.
+
+La versión de Node por defecto solo se cambia si no había ninguna, para no
+romper proyectos en una máquina que ya usabas.
+
 ## Personalizar
 
 | Quiero cambiar…            | Toco…                                   |

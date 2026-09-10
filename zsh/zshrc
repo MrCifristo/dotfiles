@@ -32,6 +32,9 @@ if command -v eza >/dev/null; then
 fi
 command -v bat >/dev/null && alias cat='bat'
 
+# Entorno de ciencia de datos (lo crea dev/*.sh en ~/.venvs/ds).
+alias ds='source "$HOME/.venvs/ds/bin/activate"'
+
 # ── NERV boot ───────────────────────────────────────────────
 # kitty marca las ventanas NUEVAS del SO con NERV_FETCH=1
 # (ver ~/.config/kitty/linux.conf y macos.conf). Las pestañas y
