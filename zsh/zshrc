@@ -1,0 +1,51 @@
+# ════════════════════════════════════════════════════════════
+#  ~/.zshrc — NERV rice (Linux + macOS)
+#  Gestionado desde ~/.dotfiles. Lo específico de cada máquina
+#  (nvm, rutas raras, tokens…) va en ~/.zshrc.local, que no se
+#  versiona.
+# ════════════════════════════════════════════════════════════
+
+# ── Homebrew (macOS): tiene que ir antes que todo lo demás ──
+if [[ "$OSTYPE" == darwin* ]]; then
+  for _b in /opt/homebrew/bin/brew /usr/local/bin/brew; do
+    [[ -x "$_b" ]] && eval "$("$_b" shellenv)" && break
+  done
+  unset _b
+fi
+
+export PATH="$HOME/.local/bin:$PATH"
+
+# ── Oh My Zsh ───────────────────────────────────────────────
+export ZSH="$HOME/.oh-my-zsh"
+ZSH_THEME=""   # vacío a propósito: el prompt lo pinta Starship
+plugins=(git zsh-autosuggestions zsh-syntax-highlighting fzf)
+[[ -s "$ZSH/oh-my-zsh.sh" ]] && source "$ZSH/oh-my-zsh.sh"
+
+# ── Prompt y navegación ─────────────────────────────────────
+command -v starship >/dev/null && eval "$(starship init zsh)"
+command -v zoxide   >/dev/null && eval "$(zoxide init zsh)"
+
+# ── Aliases ─────────────────────────────────────────────────
+if command -v eza >/dev/null; then
+  alias ls='eza --icons'
+  alias ll='eza -la --icons'
+fi
+command -v bat >/dev/null && alias cat='bat'
+
+# ── NERV boot ───────────────────────────────────────────────
+# kitty marca las ventanas NUEVAS del SO con NERV_FETCH=1
+# (ver ~/.config/kitty/linux.conf y macos.conf). Las pestañas y
+# los splits no, para que no salga el fetch en cada panel.
+if [[ -n "${NERV_FETCH:-}" ]]; then
+  unset NERV_FETCH        # que no lo hereden subshells ni tmux
+  nerv-boot
+fi
+alias nerv='nerv-boot'
+
+# ── nvm (si está instalado) ─────────────────────────────────
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+
+# ── Cosas de esta máquina (no versionado) ───────────────────
+[[ -r "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"

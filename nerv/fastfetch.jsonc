@@ -1,0 +1,40 @@
+// ════════════════════════════════════════════════════════════
+//  fastfetch — perfil NERV (versión resumida)
+//  Lo invoca ~/.local/bin/nerv-boot.
+//  Si existe ~/.config/nerv/logo.png, nerv-boot sobreescribe
+//  el logo por CLI y usa tu imagen en vez de este ASCII.
+// ════════════════════════════════════════════════════════════
+{
+  "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+
+  "logo": {
+    "type": "file",
+    "source": "~/.config/nerv/logo.txt",
+    "color": {
+      "1": "38;2;124;58;237",
+      "2": "38;2;107;100;128"
+    },
+    "padding": { "top": 0, "left": 2, "right": 3 }
+  },
+
+  "display": {
+    "separator": "  ",
+    "key": { "width": 6 },
+    "color": {
+      "keys": "38;2;124;58;237",
+      "title": "38;2;163;230;53"
+    }
+  },
+
+  "modules": [
+    { "type": "os",     "key": "PILOT", "format": "{pretty-name} {arch}" },
+    { "type": "kernel", "key": "CORE",  "format": "{release}" },
+    { "type": "uptime", "key": "SYNC" },
+    { "type": "cpu",    "key": "MAGI",  "format": "{name}" },
+    { "type": "gpu",    "key": "A.T.F", "format": "{name}", "hideType": "integrated" },
+    { "type": "memory", "key": "LCL" },
+    { "type": "shell",  "key": "SHELL", "format": "{pretty-name} {version}" },
+    "break",
+    { "type": "colors", "symbol": "block", "paddingLeft": 1 }
+  ]
+}

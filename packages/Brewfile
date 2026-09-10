@@ -1,0 +1,11 @@
+# brew bundle --file ~/.dotfiles/packages/Brewfile
+cask "kitty"
+cask "font-jetbrains-mono-nerd-font"
+brew "starship"
+brew "fastfetch"
+brew "eza"
+brew "bat"
+brew "zoxide"
+brew "fzf"
+brew "imagemagick"
+brew "git"

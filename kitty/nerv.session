@@ -1,0 +1,3 @@
+# La primera ventana de cada instancia de kitty arranca marcada
+# con NERV_FETCH=1, que es lo que dispara el fetch desde .zshrc.
+launch --env NERV_FETCH=1

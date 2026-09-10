@@ -1,0 +1,165 @@
+#!/usr/bin/env bash
+# ════════════════════════════════════════════════════════════
+#  nerv-boot — pantalla de arranque estilo NERV para kitty
+#
+#  Lo dispara ~/.zshrc cuando kitty marca la ventana con
+#  NERV_FETCH=1 (solo ventanas nuevas del SO, no tabs ni splits).
+#  También se lanza a mano con el alias `nerv`.
+#
+#  Personalización:
+#    ~/.config/nerv/logo.<ext>       → TU imagen. Cualquier formato
+#                                      (png, jpg, webp, gif, avif…).
+#                                      Se normaliza sola, ver abajo.
+#    ~/.config/nerv/phrases.txt      → las frases que rotan
+#    ~/.config/nerv/logo.txt         → ASCII de respaldo
+#    ~/.config/nerv/fastfetch.jsonc  → qué datos se muestran
+#
+#  Por qué hay caché: fastfetch usa el modo `kitty-direct`, que le
+#  pasa a kitty la RUTA del archivo declarando f=100 (=PNG). Si el
+#  archivo no es un PNG de verdad, kitty lo descarta en silencio y
+#  no se ve nada. Así que convertimos tu imagen a PNG una sola vez
+#  y guardamos el resultado en ~/.cache/nerv/.
+#
+#  La imagen se acolcha a la proporción exacta de la caja de celdas
+#  para que kitty no la deforme al estirarla.
+# ════════════════════════════════════════════════════════════
+set -u
+
+# ── cómo se instala cada cosa según el sistema ──────────────
+case "$(uname -s)" in
+    Darwin) PKG_HINT='brew install' ;;
+    *)      PKG_HINT='sudo dnf install -y' ;;
+esac
+
+NERV_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/nerv"
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/nerv"
+PHRASES="$NERV_DIR/phrases.txt"
+FFCONF="$NERV_DIR/fastfetch.jsonc"
+CACHE="$CACHE_DIR/logo-cache.png"
+DIMS="$CACHE_DIR/logo-cache.dims"
+
+# ── geometría del logo ──────────────────────────────────────
+# El alto se iguala al del bloque de texto (se mide en cada
+# arranque), y el ancho se calcula desde la proporción real de tu
+# imagen. Así los dos bloques empiezan y acaban en la misma línea,
+# sin barras vacías y sin deformar la imagen.
+#
+# Alto de celda ÷ ancho de celda, ×100. Medido con JetBrainsMono
+# a font_size 11.5 → 2.32. Si ves la imagen achatada o estirada,
+# este es el único número que hay que tocar. Se puede fijar por
+# máquina exportando NERV_CELL_RATIO en ~/.zshrc.local.
+CELL_RATIO_X100=${NERV_CELL_RATIO:-232}
+LOGO_COLS_MAX=44
+
+# ── paleta NERV (truecolor) ─────────────────────────────────
+P=$'\033[38;2;124;58;237m'   # morado EVA-01
+G=$'\033[38;2;163;230;53m'   # verde visor
+D=$'\033[38;2;107;100;128m'  # gris tenue
+O=$'\033[38;2;249;115;22m'   # naranja Unit-00
+BD=$'\033[1m'
+RS=$'\033[0m'
+
+warn() { printf '  %s%s%s\n' "$O" "$1" "$RS" >&2; }
+
+# ── ancho del marco, adaptado a la terminal ─────────────────
+cols=${COLUMNS:-0}
+case $cols in ''|*[!0-9]*) cols=0 ;; esac
+[ "$cols" -eq 0 ] && cols=$(tput cols 2>/dev/null || echo 80)
+width=$(( cols - 4 ))
+[ "$width" -gt 72 ] && width=72
+[ "$width" -lt 34 ] && width=34
+
+# repite un carácter N veces (seguro con UTF-8, a diferencia de `tr`)
+rule() {
+    local n=$1 c=$2 s=''
+    while [ ${#s} -lt "$n" ]; do s="$s$c"; done
+    printf '%s' "$s"
+}
+
+# ── frase rotativa ──────────────────────────────────────────
+phrase=''
+if [ -r "$PHRASES" ]; then
+    # awk en vez de shuf: macOS no trae coreutils.
+    phrase=$(grep -Ev '^[[:space:]]*(#|$)' "$PHRASES" \
+             | awk -v seed="$RANDOM$$" 'BEGIN{srand(seed)} {a[NR]=$0} END{if(NR) print a[int(rand()*NR)+1]}')
+fi
+[ -n "$phrase" ] || phrase="GOD'S IN HIS HEAVEN. ALL'S RIGHT WITH THE WORLD."
+
+# ── cabecera estilo consola MAGI ────────────────────────────
+label=' NERV MAGI SYSTEM '
+fill=$(( width - 3 - ${#label} ))
+[ "$fill" -lt 0 ] && fill=0
+
+printf '\n  %s\n  %s\n  %s\n' \
+  "${BD}${P}▛▀▀${RS}${BD}${D}${label}${RS}${BD}${P}$(rule "$fill" '▀')${RS}" \
+  "${BD}${P}▌${RS} ${BD}${G}${phrase}${RS}" \
+  "${BD}${P}▙$(rule $(( width - 1 )) '▄')${RS}"
+
+# ── localizar la imagen del usuario ─────────────────────────
+src=''
+for f in "$NERV_DIR"/logo.png "$NERV_DIR"/logo.jpg "$NERV_DIR"/logo.jpeg \
+         "$NERV_DIR"/logo.webp "$NERV_DIR"/logo.gif "$NERV_DIR"/logo.avif \
+         "$NERV_DIR"/logo.bmp "$NERV_DIR"/logo.tif "$NERV_DIR"/logo.tiff; do
+    [ -f "$f" ] && { src="$f"; break; }
+done
+
+# ── construir/refrescar la caché PNG ────────────────────────
+logo_ready=''
+if [ -n "$src" ]; then
+    if [ ! -f "$CACHE" ] || [ ! -f "$DIMS" ] || [ "$src" -nt "$CACHE" ]; then
+        mkdir -p "$CACHE_DIR"
+
+        conv=''
+        command -v magick  >/dev/null 2>&1 && conv='magick'
+        [ -z "$conv" ] && command -v convert >/dev/null 2>&1 && conv='convert'
+
+        if [ -n "$conv" ]; then
+            # Se conserva la proporción nativa: nada de relleno. La caja
+            # de celdas se ajustará a la imagen, no al revés.
+            if "$conv" "$src" -auto-orient -resize '800x800>' \
+                       -strip "PNG32:$CACHE" 2>/dev/null; then
+                "$conv" identify -format '%w %h' "$CACHE" > "$DIMS" 2>/dev/null \
+                  || identify -format '%w %h' "$CACHE" > "$DIMS" 2>/dev/null
+                [ -s "$DIMS" ] && logo_ready=1
+            fi
+            [ -n "$logo_ready" ] \
+              || warn "no pude convertir $src a PNG; uso el ASCII de respaldo"
+        else
+            warn "falta ImageMagick, necesario para preparar la imagen."
+            warn "Instálalo con: $PKG_HINT imagemagick"
+        fi
+    else
+        logo_ready=1
+    fi
+fi
+
+# ── fetch ───────────────────────────────────────────────────
+if ! command -v fastfetch >/dev/null 2>&1; then
+    printf '\n  %sfastfetch no está instalado:%s %s fastfetch\n\n' "$O" "$RS" "$PKG_HINT"
+    exit 0
+fi
+
+if [ -n "$logo_ready" ] && [ -s "$CACHE" ] && [ -s "$DIMS" ]; then
+    # Alto del bloque de texto, medido de verdad: así el encuadre sigue
+    # cuadrando aunque añadas o quites módulos en fastfetch.jsonc.
+    rows=$(fastfetch --config "$FFCONF" --logo-type none 2>/dev/null | wc -l | tr -d ' ')
+    case $rows in ''|*[!0-9]*) rows=10 ;; esac
+    [ "$rows" -lt 4 ] && rows=10
+
+    read -r img_w img_h < "$DIMS"
+    # cols = (ancho/alto) · filas · (alto_celda/ancho_celda)
+    den=$(( img_h * 100 ))
+    cols=$(( (img_w * rows * CELL_RATIO_X100 + den / 2) / den ))   # con redondeo
+    [ "$cols" -lt 8 ] && cols=8
+    [ "$cols" -gt "$LOGO_COLS_MAX" ] && cols=$LOGO_COLS_MAX
+
+    # Se pasan ANCHO y ALTO a propósito: si solo se diera uno, fastfetch
+    # tendría que consultar la posición del cursor y para eso limpia la
+    # pantalla, borrando la cabecera de arriba. Como la caja se calcula
+    # con la proporción real de la imagen, el estirado de kitty es 1:1.
+    exec fastfetch --config "$FFCONF" \
+                   --logo-type kitty-direct --logo "$CACHE" \
+                   --logo-width "$cols" --logo-height "$rows"
+else
+    exec fastfetch --config "$FFCONF"
+fi

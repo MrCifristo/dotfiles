@@ -1,0 +1,11 @@
+kitty
+fastfetch
+eza
+bat
+zoxide
+fzf
+zsh
+ImageMagick
+git
+curl
+unzip
