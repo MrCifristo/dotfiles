@@ -33,7 +33,11 @@ fi
 command -v bat >/dev/null && alias cat='bat'
 
 # Entorno de ciencia de datos (lo crea dev/*.sh en ~/.venvs/ds).
-alias ds='source "$HOME/.venvs/ds/bin/activate"'
+ds() {
+  local v="$HOME/.venvs/ds/bin/activate"
+  [[ -r "$v" ]] && source "$v" \
+    || echo "aún no existe; créalo con: ~/.dotfiles/dev-setup.sh"
+}
 
 # ── NERV boot ───────────────────────────────────────────────
 # kitty marca las ventanas NUEVAS del SO con NERV_FETCH=1
